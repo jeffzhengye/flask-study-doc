@@ -358,4 +358,4 @@ var webmianhua = {
 	weixin: 'mianhuabingbei',
 	website: 'http://web.pxuexiao.com'
 }
-```js
+```
