@@ -336,7 +336,8 @@ before_request()
 
 after_request(response)
 
-被装饰的函数将在处理请求之后被调用，调用时前序环节生成的Response 对象将作为参数传入。被装饰的函数需要返回一个Response对象以作为后续环节的处理对象。
+被装饰的函数将在处理请求之后被调用，调用时前序环节生成的Response 对象将作为参数传入。
+被装饰的函数需要返回一个Response对象以作为后续环节的处理对象。
 需要指出的是，如果在前序环节dispatch_request()处理请求时发生异常，after_request装饰 器装饰的函数可能被跳过。
 
 teardown_request(exception)
@@ -349,6 +350,167 @@ teardown_appcontext(exception)
 被装饰的函数将在应用上下文对象出栈之前被调用。应用上下文总是和请求上下文一起出入栈。
 ```
 
+### 18、模板渲染(jinjia2)
+```
+Flask基于Jinja2模板引擎，提供了两个渲染函数，分别使用字符串或单独的文件保存模板内容：
+
+render_template_string(sourcestr,**context) - 使用sourcestr作为模板字符串
+render_template(filename,**context) - 使用filename指定的文件内容作为模板字符串
+render_template_string ：下面的示例使用一个相当简单的模板，向不同的用户回 送个性化的欢迎信息：
+
+@app.route('/user/<uname>')
+def show_user_profile(uname):    
+    return render_template_string('<h1>Welcome,{{ uname }}</h1>',uname=uname)
+</uname>
+在Jinja2的语法中，{{varibale}}表示一个输出命令，每当渲染引擎发现一个输出命令，
+它就在渲染结果中，使用模板数据上下文中变量variable的值替换原始的输出命令。
+
+render_template ：在生产环境中，在代码里写模板字符串不是什么好主意。
+正经的方法是将模板写在单独的模板文件里，使用render_template()函数进行渲染：
+
+@app.route('/user/<username>')
+def v_user(username):    
+    return render_template('user.html',username=username)
+</username>
+默认情况下，Flask使用当前模块文件夹下的templates子目录作为模板目录，user.html文件 应当放置在这个文件夹下：
+
+/app
+    /web.py
+    /templates
+        /user.html
+user.html的内容如下：
+
+<body>
+    <h1>Welcome, {{ username }}</h1>
+</body>
+```
+
+### 19、变量与表达式
+```
+模板变量在模板被渲染时通过上下文字典传递给模板。下面的示例中，在模板中使用了变量name和age，
+当调用render_template_string()渲染模板时，通过关键字参数 将两个变量的值传递进来：
+
+tpl = 'name : {{ name }} age : {{age}} '
+print render_template_string(tpl,name='Marion5',age=12)
+变量成员 ：如果传入模板的变量是不是Python简单类型，而是比如字典或对象类型， 那么在模板中可以向Python中一样的方式访问其成员属性或方法。
+
+稍有不同的是，对于字典变量，除了可以使用[]方式访问其成员，还可以使用.：
+
+tpl = 'name: {{u["name"]}} name again:{{u.name}}'
+print render_template_string(tpl,u={'name':'Marion5','age':12})
+同样的，对于对象变量，除了使用.访问属性值，还可以使用[]：
+
+class User:
+    def __init__(self,name,age):
+        self.name = name
+        self.age = age
+tpl = 'name : {{u.name}} name again:{{u["name"]}}'
+print render_template_string(tpl,u=User('Mary',20))
+表达式 ：变量还可以应用表达式，比如进行数学运算，那些常用的数学 操作符（ + - * / // % ** ）都是有效的：
+
+data = {'x':12,'y':13}
+tpl = '{{x}} + {{y}} = {{ x+y }}'
+print render_template_string(tpl,**data)
+或者进行比较或逻辑运算（ == != > >= < <= and or not）:
+
+data = {'x':12,'y':13,'z':11}
+tpl = '{{x}} > {{y}} : {{ x>y }}'
+print render_template_string(tpl,**data)
+函数调用 ：在输出命令中，可以对变量或常量进行函数调用：
+
+tpl = '{{ range(10) }} '
+print render_template_string(tpl)
+需要注意的是，模板有自己的全局域/globals，因此这里的range()函数并不是Python 应用中的函数。
+
+```
+
+### 20、全局对象
+```
+Jinja2内置的全局对象包括：
+
+range([start, ]stop[, step])
+lipsum(n=5, html=True, min=20, max=100)
+dict(**items)
+class cycler(*items)
+class joiner(sep=', ')
+Flask向Jinja2模板注入了以下全局对象，可以在模板中直接访问：
+
+config - 当前Flask应用实例的配置对象
+request - 当前HTTP请求对象
+session - 当前HTTP请求的会话对象
+g - 当前HTTP请求周期内的全局对象
+url_for() - URL生成函数
+get_flashed_messages() - 闪信函数
+下面的示例中，从session中提取当前用户名：
+
+@app.route('/')
+def v_index():
+    tpl = 'welcome back, {{ session.username }}, your user agent is <b>{{ request.headers['User-Agent']}}</b>'
+    return render_template_string(tpl)
+    
+```
+
+### 21、自定义全局对象
+```
+可以使用应用对象的context_processor装饰器向引擎注入额外的全局对象。 下面的示例向模板全局域中注入vendor变量，其值为hubwiz：
+
+@app.context_processor
+def vendor_processor():
+    return dict(vendor='hubwiz')
+这时我们可以在模板中直接使用vendor变量了：
+
+@app.route('/')
+def v_index():
+    tpl = 'powered by {{vendor}}'
+    return render_template_string(tpl)
+当然，同样的方法可以用于注入全局函数。下面的示例向模板全局域中注入format_price 函数：
+
+@app.context_processor
+def utility_processor():
+    def format_price(amount, currency=u'€'):
+        return u'{0:.2f}{1}'.format(amount, currency)
+    return dict(format_price=format_price)
+
+```
+
+### 21、过滤器
+```
+模板中可以使用过滤器|来修改变量的值。下面的示例使用内置的title过滤器 将name变量中每个单词的首字母转换为大写：
+
+tpl = '{{ name|title  }}'
+print render_template_string(tpl,name='jimi hendrix') #Jimi Hendrix
+过滤器级联 ：可以将多个过滤器串联起来，构成过滤流水线。下面的示例对name 变量依次使用了两个过滤器，scriptags过滤器用来除去name变量中的HTML标签， title过滤器将传入的字符串中每个单词的首字母转换为大写：
+
+tpl = '{{ name|striptags|title  }}'
+print render_template_string(tpl,name='<h1>jimi hendrix</h1>') #Jimi Hendrix
+过滤器参数 ：可以使用小括号为过滤器传入额外的参数。下面的示例将列表型变量 的多个成员使用join过滤器连接起来：
+
+tpl = '{{ seq | join("-") }}'  
+print render_template_string(tpl,seq=[1,2,3]) # 1-2-3
+在Jinja2中，一个过滤器其实就是一个函数，第一个参数用来接收前序环节传入的值，而 返回值则作为后续环节过滤器函数的第一个参数：
+
+Jinja2内置了很多过滤器，在其官网文档页 可以了解详细情况。
+```
+
+### 22、定制过滤器
+```
+我们已经知道，过滤器其实就是一个函数。在Flask中，可以使用Flask.template_filter 装饰器创建自己的过滤器。下面的示例创建了一个名为reverse的串反转过滤器，它总是 将输入的字符串逆向重排：
+
+@app.template_filter('reverse')
+def reverse_filter(s):
+    return s[::-1]
+下面的示例演示了如何调用我们自制的过滤器：
+
+@app.route('/')
+def index():
+    return render_template_string('{{ greeting | reverse }}',greeting='Hello, Jinja2' )
+另一种等价地创建定制过滤器的方法是将过滤器函数添加到Flask应用实例的jinja_env字典中：
+
+def reverse_filter(s):
+    return s[::-1]
+app.jinja_env.filters['reverse'] = reverse_filter
+
+```
 
 ## 棉花冰杯
 ```js
