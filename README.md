@@ -24,3 +24,17 @@ app = Flask(__name__,static_folder='assets',static_url_path='/assets')
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5001, debug=True)
 ```
+
+### 3、添加URL变量
+```
+如果指定访问点对应的视图函数接收参数，那么关键字参数将生成对应的参数URL。
+下面的 示例将生成/contact/Julia?format=html：
+
+@app.route('/')
+def v_index():
+    print url_for('v_contact',name='Julia',format='html')  #  /contact/<name>
+    return ''
+@app.route('/contact/<name>')
+def v_contact(name):pass
+</name>
+```
