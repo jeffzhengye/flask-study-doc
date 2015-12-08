@@ -1,14 +1,24 @@
-# flask-study 常见问题
+# 棉花冰杯
+```js
+var webmianhua = {
+	author: '棉花冰杯(勺哥)',
+	qq: 136733282,
+	weixin: 'mianhuabingbei',
+	website: 'http://web.pxuexiao.com'
+}
+```
+
+# python中flask 常见问题
 
 ### 1、改变默认的本地路径
 ```
 可以在创建应用对象时使用关键字参数static_folder改变 默认的静态文件夹。
 例如，你的静态文件都存放在应用下的assets目录下， 那么可以按如下的方式创建应用对象：
 
-app = Flask(__name__,static_folder='assets')
+app = Flask(__name__,static_folder='assets',template_folder='template')
 也可以使用一个绝对路径：
 
-app = Flask(__name__,static_folder='/var/www/static')
+app = Flask(__name__,static_folder='/var/www/static',)
 改变默认的本地路径并不会对路由表产生影响。
 
 改变默认的URL规则 ： 如果不喜欢静态目录URL/static，也可以在创建应用 对象时使用关键字参数static_url_path换一个别的名字。
@@ -350,6 +360,8 @@ teardown_appcontext(exception)
 被装饰的函数将在应用上下文对象出栈之前被调用。应用上下文总是和请求上下文一起出入栈。
 ```
 
+# jinjia2模板
+
 ### 18、模板渲染(jinjia2)
 ```
 Flask基于Jinja2模板引擎，提供了两个渲染函数，分别使用字符串或单独的文件保存模板内容：
@@ -512,7 +524,300 @@ app.jinja_env.filters['reverse'] = reverse_filter
 
 ```
 
-## 棉花冰杯
+### 23、变量转义
+```
+解决这些问题的办法就是对变量执行转义操作，将变量中的具有特殊含义的HTML字符 使用HTML实体码表示。例如：<IAMKING>将被转换为&lt;IAMKING&gt;。
+
+自动转义 ： 在模板中使用autoescape标签可以开启或关闭模板引擎的自动转义 功能。在开启自动转义功能时，
+模板引擎将对转义块内的所有变量自动执行转义操作。
+
+下面的示例中，使用autoescape标签开启了自动转义：
+
+user = {'id':123,'nickname':'< IAMKING>'}
+tpl = '''
+      {% autoescape true %}
+      <h1>homepage of <a href="/user/{{id}}">{{nickname}}</a></h1>
+      {% endautoescape %}
+      '''
+render_template_string(tpl,**user)
+但是自动转义开启的时候，会对转义块内所有的变量执行转义操作，即是这些变量压根 不可能包含HTML字符，
+或者其内容可控。当变量数量很多时，这将造成不必要的性能损失。
+
+我们可以使用safe过滤器将这些可控的变量标记为安全的，渲染引擎将不再对其进行转义。 下面的示例中，使用safe标签取消id变量的转义操作：
+
+user = {'id':123,'nickname':'< IAMKING>'}
+tpl = '''
+      {% autoescape true %}      
+      <h1>homepage of <a href="/user/{{id | safe}}">{{nickname}}</a></h1>
+      {% endautoescape %}
+      '''
+render_template_string(tpl,**user)
+手动转义 ：和自动转义对应的就是手动的对变量执行转义操作。方法是使用escape 过滤器，可以简写为e。
+
+下面的示例中，对模板中的nickname变量执行手动转义：
+
+user = {'id':123,'nickname':'< IAMKING>'}
+tpl = '<h1>homepage of <a href="/user/{{id}}">{{nickname | e }}</a></h1>'
+render_template_string(tpl,**user)
+```
+
+### 24、循环结构
+```
+假设我们有一组用户数据如下:
+
+data = [
+    {'name' : 'John','age' : 20,},
+    {'name' : 'Linda','age' : 21},
+    {'name' : 'Mary','age' : 30},
+    {'name' : 'Cook','age' : 40}
+]
+可以使用循环结构，对一组数据使用单一模板进行渲染：
+
+{% for [loop condition] %}
+...
+{% endfor%}
+下面的示例对列表中的每一个对象生成一个<li>标签：
+
+tpl = '''
+      <ul>
+          {{% for user in users %}}
+          <li>{{ user.name }}</li>
+          {{% endfor %}}
+      </ul>
+      '''
+render_template_string(tpl,users=data)
+迭代过滤 ：Jinja2的for循环不能像Python一样中途退出/break或跳过/continue， 但是它支持在迭代时进行条件过滤。下面的示例模板只为年龄大于25的用户生成列表项：
+
+tpl = '''
+      <ul>
+          {{% for user in users if user.age > 25 %}}
+          <li>{{ user.name }}</li>
+          {{% endfor %}}
+      </ul>
+      '''
+render_template_string(tpl,users=data)
+默认输出块 ：如果没有执行至少一次循环（比如列表为空，或者被过滤了）， 可以使用else块生成默认的输出。下面的示例模板将在没有用户匹配时输出not found：
+
+tpl = '''
+      <ul>
+          {{% for user in users if user.age > 50 %}}
+          <li>{{ user.name }}</li>
+          {{% else %}}
+          <li>not found!</li>
+          {{% endfor %}}
+      </ul>
+      '''
+render_template_string(tpl,users=data)
+```
+
+### 25、递归循环
+```
+有些数据是具有不确定层次的递归数据，比如文件系统，目录里还有目录：
+
+/application                    ------ 目录          
+    /app.py                     ------ 文件
+    /static                     ------ 目录
+        /main.css               ------ 文件
+        /jquery.min.css         ------ 文件
+    /templates                  ------ 目录
+        /user.html              ------ 文件
+其对应的数据表达参见示例中的tree对象。
+
+Jinja2的循环结构支持递归调用。使用方法如下：
+
+1.使用recursive关键字声明循环为递归循环
+
+{% for item in data recursive}
+...
+{% endfor %}
+2.在循环内部，使用loop()函数调用子节点
+
+{{ loop(item.children) }}
+
+```
+
+### 26、循环块中的特殊变量
+```
+在for循环块中，Jinja2提供了关于循环的一些特殊变量：
+
+loop.index ：当次执行的循环序号，从1开始。下面的示例将输出1至10：
+
+{% for i in range(10) %}
+{{ loop.index }}
+{% endfor %}
+loop.index0 ：当前执行的循环序号，从0开始。
+
+loop.revindex ：当前执行的循环反序序号，从1开始。下面的示例将输出10至1：
+
+{% for i in range(10) %}
+{{ loop.revindex }}
+{% endfor %}
+loop.revindex0 ：当前执行的循环反序序号，从0开始
+
+loop.first ：如果当次执行是循环中的首次，则值为True。下面的示例将输出True、False、False....
+
+{% for i in range(10) %}
+{{ loop.index }}
+{% endfor %}
+loop.last ：如果档次执行时循环中的最后一次，则值为True
+
+loop.length ：列表中的元素数量
+
+loop.cycle(*args) ：从一个列表中循环取值。下面的示例将循环输出c1、c2、c3、c1、c2、c3...
+
+{% for i in range(10) %}
+{{ loop.cycle('c1','c2','c3') }}
+{% endfor %}
+loop.depth ：递归循环的层深，从1开始
+
+loop.depth0 ：递归循环的层深，从0开始
+```
+
+### 27、条件结构
+```
+在Jinja2中，可以使用条件块设置模板内容的输出条件。只有当指定的条件 满足时，条件块内的模板内容才会被渲染输出：
+
+{% if [condition] %}
+...
+{% endif %}
+下面的示例中，只有当用户的年龄不小于18岁时，才输出适合成人观看的内容：
+
+data = {'name':'Obama',age:62}
+tpl = '''
+      {% if user.age >= 18 %}
+      <div>some adult content...</div>
+      {% endif %}
+      '''
+render_template_string(tpl,user=data)
+elif ：可以为条件块添加使用elif添加多重条件判断分支:
+
+{% if [condition] %}
+...
+{% elif [condition2] %}
+...
+{% elif [condition3] %}
+...
+{% endif%}
+下面的示例中，当用户的年龄大于60岁时，输出养生节目，大于18岁而小于60岁时，输出成人节目：
+
+data = {'name':'Obama',age:62}
+tpl = '''
+      {% if user.age >= 60%}
+      <div>some health preserving content...</div>
+      {% elif user.age >= 18 %}
+      <div>some adult content...</div>
+      {% endif %}
+      '''
+render_template_string(tpl,user=data)
+else ：当条件块中的所有条件都不满足时，可以使用else添加默认输出块:
+
+{% if [condition] %}
+...
+{% elif [condition2] %}
+...
+{% else %}
+...
+{% endif %}
+下面的示例中，给未成年人输出卡通节目：
+
+data = {'name':'Obama',age:62}
+tpl = '''
+      {% if user.age >= 60 %}
+      <div>some health preserving content...</div>
+      {% elif user.age >= 18 %}
+      <div>some adult content...</div>
+      {% else %}
+      <div>some cartoon content...</div>
+      {% endif %}
+      '''
+render_template_string(tpl,user=data)
+
+```
+
+# 数据库
+
+### 28、概述
+```
+Flask框架没有像Django一样，预置ORM包。因此，我们可以有多种选择。
+
+差不多每一种数据库产品都有其Python访问包，比如对于sqlite数据库， 可以使用内置的sqlite3包；
+对于MySQL数据库，可以使用MySQL-python包； 对于MongoDB，可以使用pymongo包...
+
+这种方式是最灵活的，可以支持几乎全部类型的数据库，无论SQL还是NOSQL， 而且可以进行最大限度的性能挖掘。
+
+不过在本课程内，我们将选择性地忽略这种数据库访问方式，而是将关注点放 在一般性框架中常见的ORM产品上
+ —— 在Flask中，我们使用SQLAlchemy。
+
+```
+
+### 29、ORM ：对象-关系映射
+```
+ORM的全称是Object Relational Mapping，即对象-关系映射，是面向对象/OO 理念向数据持久化方向的自然延伸，是OO和SQL两股思潮在最高点的自然媾和。
+
+还得站在OO拥护者的角度看ORM的诞生。当一切应用都以OO的思想被分解为一个 一个对象以后，设计者突然发现，这些对象只能存活在内存中，插头一拔，什么 都没了。
+
+要硬盘！要永生！
+
+上世纪90年代OO高潮的时候，恰巧关于数据存储的关系理论也大行其道，硬盘 是关系理论三范式的天下。各种关系数据库产品，做的相当好的一点是其操作 语言基本统一到SQL标准上了，
+
+OO界在搞自己的OO数据库未果后，决定联姻关系数据库，实现对象永生的目标。 ORM粉墨登场。
+
+ORM的一般性思路
+
+ORM的目的是持久化对象，比如你定义一个User类，创建了一堆User对象：
+
+class User:
+    def __init__(self,id,name,age):
+        self.id = id
+        self.name = name
+        self.age = age
+ 
+user1 = User(1,'Zhang3',20)        
+user2 = User(2,'Li4',30)
+user3 = User(3,'Wang5',40)
+ORM希望你能这样把上面三个对象持久化到硬盘里：
+
+user1.save()
+user2.save()
+user3.save()
+然后，第二天上班开机，重新启动程序，可以再把这三个对象找回来：
+
+user1 = User.load(id=1)
+user2 = User.load(id=2)
+user3 = User.load(id=3)
+一旦对象找回来，重新进入内存，就是OO的地盘了，无论加加减减都能应付。
+
+```
+
+### 30、定义对象模型
+```
+别忘了ORM是搞OO的人发起的，所以，和通常的数据库应用开发从E-R数据模型开始 不同，使用ORM是从定义对象模型开始的。
+
+在下面的示例中，我们定义一个类User。请注意User类是从db.Model继承 来的：
+
+class User(db.Model):
+    __tablename__ = 'ezuser'
+    id = db.Column(db.Integer,primary_key=True)
+    name = db.Column(db.String(64),unique=True,index=True)
+    age = db.Column(db.Integer)
+上面的示例中，你应该注意到了，成员变量被定义为db.Column类的实例：
+
+id - id被定义为整型、主键
+name - name被定义为字符串类型、建立唯一索引
+age - age简单的被定义为整型
+User类的成员变量__tablename__定义了这个对象对应的数据表名。这个变量是 可选的，默认情况下，SQLAlchemy将使用类名作为表名。
+
+SQLAlchemy支持的常见的字段数据类型如下：
+
+db.Integer - 32位整型，对应于Python的int
+db.Float - 浮点型，对应于Python的float
+db.String - 变长字符串，对应于Python的str
+db.DateTime - 日期时间型，对应于Python的datetime.datetime
+看到这里，可能你大约明白了。通过这样的定义方法，SQLAlchemy已经搜集到 足够的信息进行数据库操作了：
+表名、字段名、字段类型、字段约束（主键信息、 索引信息...）
+```
+
+# 棉花冰杯
 ```js
 var webmianhua = {
 	author: '棉花冰杯(勺哥)',
