@@ -38,3 +38,24 @@ def v_index():
 def v_contact(name):pass
 </name>
 ```
+
+### 4、添加锚点
+```
+使用_anchor关键字可以为生成的URL添加锚点。下面的示例将生成URL /contact#part2
+
+@app.route('/')
+def v_index():
+    print url_for('v_contacts',_anchor='part2')
+@app.route('/contact')
+def v_contacts():pass
+```
+### 5、外部URL
+```
+默认情况下，url_for()生成站内URL，可以设置关键字参数_external 为True，生成包含站点地址的外部URL。下面的示例将生成URLhttp://<x.y.z>/contacts:
+
+@app.route('/')
+def v_index():
+    print url_for('v_contacts',_external=True)
+@app.route('/contact')
+def v_contacts():pass
+```
