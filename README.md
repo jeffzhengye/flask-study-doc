@@ -81,4 +81,20 @@ url - 记录请求的URL地址。类型：string
 def index(): 
     print request.headers
     return 'see console output'
+
+比如，如果想获取cookie，可以用 request.headers['Cookie'] 来获取
+```
+
+### 7、读取表单数据
+```
+Flask框架将用户使用POST方法提交的表单数据，存储在所创建Request对象的 form属性中。
+
+form是一个MultiDict类型的对象，和Dict类似，我们可以使用[]操作符读取 指定的键值：
+
+@app.route('/')
+def v_index():
+    uid = request.form['uid']
+    pwd = request.form['pwd']
+    return  'uid : %s pwd : %s' % (uid,pwd)
+除了form属性，也可以使用Request对象的values属性来读取表单值，用法相同。
 ```
