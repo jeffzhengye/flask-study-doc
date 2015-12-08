@@ -85,7 +85,7 @@ def index():
 比如，如果想获取cookie，可以用 request.headers['Cookie'] 来获取
 ```
 
-### 7、读取表单数据
+### 7、读取表单数据(POST方式提交)
 ```
 Flask框架将用户使用POST方法提交的表单数据，存储在所创建Request对象的 form属性中。
 
@@ -97,4 +97,17 @@ def v_index():
     pwd = request.form['pwd']
     return  'uid : %s pwd : %s' % (uid,pwd)
 除了form属性，也可以使用Request对象的values属性来读取表单值，用法相同。
+```
+
+### 8、读取查询参数(GET方式提交)
+```
+对于浏览器以GET方法提交的表单数据，Flask框架将其存储在Request实例对象的args 属性中。
+
+和form属性一样，args属性也是一个MultiDict类型的对象，因此我们可以是用[]操作 符读取指定键值：
+
+@app.route('/search')
+def v_search():
+    q = request.args['q']
+    return 'you are searching %s' % q
+除了args属性，也可以使用Request对象的values属性来读取查询参数。
 ```
