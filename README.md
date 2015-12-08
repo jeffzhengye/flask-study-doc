@@ -154,7 +154,8 @@ Flask框架将基于这个返回结果构造如下的Response对象：
 response : ['pong']
 status_code : 200
 mimetype : 'text/html'
-视图函数返回元组 ：当视图函数返回的是一个形式如(response,status,headers)的元组时， Flask自动根据这几个值构造一个Response对象。
+视图函数返回元组 ：当视图函数返回的是一个形式如(response,status,headers)的元组时，
+Flask自动根据这几个值构造一个Response对象。
 
 下面的示例中，视图函数v_ping()返回一个包含响应正文、状态码和包头的元组：
 
@@ -225,7 +226,8 @@ print json.dumps(b) # '{"x":1,"y":2}'
 def v_users():
     users = ['Linda','Marion5','Race8']
     return json.dumps(users),200,[('Content-Type','application/json;charset=utf-8')]
-为了向客户端正确标示响应的类型，我们在视图函数返回时使用了元组，在响应报文头/headers 中添加了Content-Type字段，并设置响应正文类型为application/json。
+为了向客户端正确标示响应的类型，我们在视图函数返回时使用了元组，在响应报文头/headers中添加了Content-Type字段，
+并设置响应正文类型为application/json。
 
 ```
 
@@ -234,7 +236,8 @@ def v_users():
 使用flask框架的redirect()方法，可以要求客户端进行重定向：
 
 flask.redirect(location, code=302, Response=None)
-redirect()方法其实是构造了一个具有重定向状态码的Response对象。重定向状态码 默认为302，这表示一个临时性重定向。redirect()方法还支持以下重定向状态码：
+redirect()方法其实是构造了一个具有重定向状态码的Response对象。重定向状态码 默认为302，这表示一个临时性重定向。
+redirect()方法还支持以下重定向状态码：
 
 301 - 请求的网页已被永久移动到新位置
 302 - 服务器目前正从不同位置的网页响应请求，但请求者应继续使用原有位置来进行以后的请求。
@@ -258,7 +261,8 @@ def v_newbies():
 可以使用flask框架的abort()方法通知框架终止处理当前响应：
 
 flask.abort(code)
-abort()方法的code参数用来指定返回给客户端的HTTP状态码。由于abort()方法 将抛出HttpException异常，因此它之后的代码不会被执行。
+abort()方法的code参数用来指定返回给客户端的HTTP状态码。由于abort()方法 将抛出HttpException异常，
+因此它之后的代码不会被执行。
 
 下面的示例中，要求访问/admin时必须附加查询参数token，否则返回HTTP 状态码401，提醒用户没有权限：
 
@@ -289,18 +293,69 @@ def v_index():
     return request.cookies['session']
 访问者信息的记录问题
 
-服务器可以记录、提取指定访问者的历史信息。对每一个会话ID，服务端维护一个 数据上下文，这个数据运行在内存中，通常在变化时持久化到文件系统中或数据库中。
+服务器可以记录、提取指定访问者的历史信息。对每一个会话ID，服务端维护一个 数据上下文，
+这个数据运行在内存中，通常在变化时持久化到文件系统中或数据库中。
 
 在视图函数内，Flask提供了一个全局对象session，它始终等效于当前请求所对应的 Session类实例对象。
-Session类定义了get_item()方法和set_item()方法， 因此我们可以像使用Dict对象一样，通过[]操作符读取或设置会话变量：
+Session类定义了get_item()方法和set_item()方法， 因此我们可以像使用Dict对象一样，
+通过[]操作符读取或设置会话变量：
 
 @app.route('/')
     if !session['user']:
         return redirect('/login')
     return 'some restricted for authorized users only'
-由于默认情况下，Flask将会话对象加密后存储在客户端的cookie里，因此必须要 为应用实例的secret_key属性配置一个加密种子才能使用session：
+由于默认情况下，Flask将会话对象加密后存储在客户端的cookie里，
+因此必须要为应用实例的secret_key属性配置一个加密种子才能使用session：
 
 app.secret_key = 'sth. random as a encrypt key.'
 
 ```
 
+### 16、伪造请求上下文
+```
+有一种场景特别需要伪造请求上下文 —— 自动测试：
+
+@app.route('/genius')
+def genius():
+    return 'nothing special'
+with app.test_request_context('/genius',method='GET'):
+    print app.dispatch_request() 
+```
+
+### 17、生命周期
+```
+Flask框架在一次请求应答的生命周期中，提供了一些方便的装饰器以便开发者可以 在合理的时间点注入一些定制化的代码：
+
+before_first_request()
+
+被装饰的函数将在应用启动后，处理第一个请求之前被调用
+
+before_request()
+
+被装饰的函数将在处理请求之前被调用
+
+after_request(response)
+
+被装饰的函数将在处理请求之后被调用，调用时前序环节生成的Response 对象将作为参数传入。被装饰的函数需要返回一个Response对象以作为后续环节的处理对象。
+需要指出的是，如果在前序环节dispatch_request()处理请求时发生异常，after_request装饰 器装饰的函数可能被跳过。
+
+teardown_request(exception)
+
+被装饰的函数将在请求上下文对象出栈之前被调用。
+和after_request不同，即使前序环节发生异常，Flask保证这个函数总能被调用。因此，清理 性质的代码应当放置在此处。
+
+teardown_appcontext(exception)
+
+被装饰的函数将在应用上下文对象出栈之前被调用。应用上下文总是和请求上下文一起出入栈。
+```
+
+
+## 棉花冰杯
+```js
+var webmianhua = {
+	author: '棉花冰杯(勺哥)',
+	qq: 136733282,
+	weixin: 'mianhuabingbei',
+	website: 'http://web.pxuexiao.com'
+}
+```js
