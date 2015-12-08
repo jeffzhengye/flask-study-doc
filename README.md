@@ -51,11 +51,34 @@ def v_contacts():pass
 ```
 ### 5、外部URL
 ```
-默认情况下，url_for()生成站内URL，可以设置关键字参数_external 为True，生成包含站点地址的外部URL。下面的示例将生成URLhttp://<x.y.z>/contacts:
+默认情况下，url_for()生成站内URL，可以设置关键字参数_external 为True，生成包含站点地址的外部URL。
+下面的示例将生成URLhttp://<x.y.z>/contacts:
 
 @app.route('/')
 def v_index():
     print url_for('v_contacts',_external=True)
 @app.route('/contact')
 def v_contacts():pass
+```
+
+### 6、Request对象
+```
+Request实例对象中包含 了关于一次HTTP请求的一切信息，常用的属性包括：
+
+form - 记录请求中的表单数据。类型：MultiDict
+args - 记录请求中的查询参数。类型：MultiDict
+cookies - 记录请求中的cookie。类型：Dict
+headers - 记录请求中的报文头。类型：EnvironHeaders
+method - 记录请求使用的HTTP方法：GET/POST/PUT....。类型：string
+environ - 记录WSGI服务器转发的环境变量。类型：Dict
+url - 记录请求的URL地址。类型：string
+关于Request类的详细信息，可以查阅 Flask官网
+
+
+在视图函数中，可以直接使用全局对象request访问当次请求对应的Response对象。 下面的示例打印当前请求的全部报文头信息：
+
+@app.route('/')
+def index(): 
+    print request.headers
+    return 'see console output'
 ```
